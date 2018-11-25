@@ -8,6 +8,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 /**
  * @Author haien
@@ -25,7 +26,7 @@ public class Replace {
 
         //调用删除字符串的方法
         try {
-            replaceInFile(args[0],args[1]);
+            replaceInFile2(args[0],args[1]);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (IsDirectoryException e) {
@@ -95,6 +96,45 @@ public class Replace {
         }
         //删除缓存文件
         Files.delete(tmpFile);
+        //日志
+        System.out.println("字符串删除完毕！");
+    }
+
+    /**
+     * @Author haien
+     * @Description 新建缓存文件，读取源文件，删除字符串后写入缓存文件，重命名缓存文件，删除源文件
+     * @Date 2018/11/24
+     * @Param [path, target]
+     * @return void
+     **/
+    private static void replaceInFile2(String path,String target) throws IOException, IsDirectoryException, InvalidFileException {
+        //用指定路径创建Path对象
+        Path file=Paths.get(path);
+        File file1=file.toFile();
+
+        //缓存文件
+        String filename=file.getFileName().toString().substring(0,file.getFileName().toString().lastIndexOf(".")); //切割文件名
+        String suffix=file.getFileName().toString().substring(file.getFileName().toString().lastIndexOf(".")); //文件后缀
+        Path tmpFile=Paths.get(file.getParent()+"/"+filename+".tmp"+suffix); //试试.tmp结尾
+
+        //读取文本文件
+        BufferedReader reader = Files.newBufferedReader(file);
+        BufferedWriter writer = Files.newBufferedWriter(tmpFile);
+        String info = null;
+        while ((info = reader.readLine()) != null) { //纯文本大多数有换行符
+            if (info.contains(target)) {
+                info = info.replaceAll(target, "");
+            }
+            writer.write(info + "\r\n");
+        }
+        writer.flush();
+        writer.close();
+        reader.close(); //记得关，不然后面move报错FileAlreadyExistsException，因为文件被占用了
+
+        //强制覆盖源文件，相当于重命名
+        Files.move(tmpFile,file,StandardCopyOption.REPLACE_EXISTING); //tmp覆盖源文件内容，但源文件名不变
+        /*删除缓存文件
+        Files.delete(tmpFile); 上面move换成copy的话就需要删除了*/
         //日志
         System.out.println("字符串删除完毕！");
     }
